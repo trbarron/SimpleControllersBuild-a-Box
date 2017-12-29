@@ -123,22 +123,18 @@ void loop()
   int modB = 0;
   int modC = 0;
 
-  //This reads control stick as neutral when both left/right or up/down is pressed at the same time.  Also sets parameters for the diffrent analog tilt modifiers IE: X1+X2 = X3
-  //UPDATE: NOW CORRESPONDS TO PROPER SMASHBOX ANGLES
- 
+  //This reads control stick as neutral when both left/right or up/down is pressed at the same time. Sets "__One" flags for use in logic later
   if (digitalRead(LEFT) == LOW && digitalRead(RIGHT) == HIGH)leftOne = 1;
   if (digitalRead(RIGHT) == LOW && digitalRead(LEFT) == HIGH)rightOne = 1;
   if (digitalRead(UP) == LOW && digitalRead(DOWN) == HIGH)upOne = 1;
   if (digitalRead(DOWN) == LOW && digitalRead(UP) == HIGH)downOne = 1;
-
-  if (digitalRead(DOWN) == LOW && digitalRead(DOWN) == HIGH)downOne = 1;
-  if (digitalRead(DOWN) == LOW && digitalRead(DOWN) == HIGH)downOne = 1;
-
   
+  //MOD1 = modA; MOD2 = modB; MOD1+MOD2 = modC. Again, sets flags for use later
   if (digitalRead(MOD1) == LOW && digitalRead(MOD2) == HIGH)modA = 1;
   if (digitalRead(MOD2) == LOW && digitalRead(MOD1) == HIGH)modB = 1;
   if (digitalRead(MOD1) == LOW && digitalRead(MOD2) == LOW)modC = 1;
 
+  //Using flags from earlier computes the grey stick values
   
   //IF SHIELD DROP
   if (downOne && (digitalRead(Z) == LOW || digitalRead(RLIGHT) == LOW || digitalRead(L) == LOW))
@@ -196,6 +192,7 @@ void loop()
   if (digitalRead(Z) == LOW)pinZ = 1;
   if (digitalRead(START) == LOW)pinSTART = 1;
 
+  //Save/Load state buttons. Press both to taunt.
   if (digitalRead(LSTATE) == LOW && digitalRead(SSTATE) == LOW)pinTaunt = 1;
   else if (digitalRead(LSTATE) == LOW)pinLState = 1;
   else if (digitalRead(SSTATE) == LOW)pinSState = 1;
@@ -205,7 +202,6 @@ void loop()
   //This is for digital shield
   if (digitalRead(R) == LOW)pinR = 1;
   if (digitalRead(L) == LOW)pinL = 1;
-
   
   //reports data
   d.report.a = pinA;
