@@ -1,12 +1,10 @@
 #include "Nintendo.h"
 /* This code uses the Nicohood Library
  * Use this code at your own risk
- * Code written by Simple Controllers and this code is open source.
- * Meaning its free to share, improve on, or anything you like!
- * Just remember to mention you used my code!
- * Version 2.0 I just suck at github
+ * Code written by Simple Controllers, modified to liking by Tyler Barron. This code is open source.
  */
-//This makes the controller bidirection data line on pin number8
+
+  //This makes the controller bidirection data line on pin number8
 CGamecubeConsole GamecubeConsole(8);      //Defines a "Gamecube Console" sending data to the console on pin 8
 Gamecube_Data_t d = defaultGamecubeData;   //Structure for data to be sent to console
 
@@ -23,7 +21,7 @@ const int START = 31;
 
 const int R = 34;
 const int L = 35;
-const int RLIGHT = 36;
+const int RLIGHT = 23;
 //This is the value of analog shielding 74 is lightest possible on gamecube.  It varies from gamecube to dolphin no idea why.
 const int RLIGHTv = 74;
 
@@ -32,29 +30,16 @@ const int RIGHT = 39;
 const int UP = 40;
 const int DOWN = 41;
 
-//NEW!! Fixed the mixup of X1 and X2 buttons, they now correspond to the correct buttons.  
-//If you are updating from 1.0/1.1 you might have to change the internal pins on your box or just swap the pin numbers here.
-const int X1 = 44;
-const int X2 = 45;
-const int Y1 = 46;
-const int Y2 = 47;
-
-//This is analog tilt modifiers and can be changed to your liking
-const int X1v = 27;
-const int X2v = 55;
-const int X3v = 73;
-
-const int Y1v = 27;
-const int Y2v = 53;
-const int Y3v = 74;
-
 const int CLEFT = 48;
 const int CRIGHT = 49;
 const int CUP = 50;
 const int CDOWN = 51;
 
-//THIS IS THE SWITCH/BUTTON TO TOGGLE MODIFIERS (X1, X2, Y1, Y2) TO DPAD
-const int SWITCH = 12;
+const int LSTATE = 52;
+const int SSTATE = 53;
+
+const int MOD1 = 46;
+const int MOD2 = 44;
 
 void setup()
 {
@@ -75,17 +60,16 @@ void setup()
   pinMode(UP, INPUT_PULLUP);
   pinMode(DOWN, INPUT_PULLUP);
   
-  pinMode(X1, INPUT_PULLUP);
-  pinMode(X2, INPUT_PULLUP);
-  pinMode(Y1, INPUT_PULLUP);
-  pinMode(Y2, INPUT_PULLUP);
+  pinMode(LSTATE, INPUT_PULLUP);
+  pinMode(SSTATE, INPUT_PULLUP);
+
+  pinMode(MOD1, INPUT_PULLUP);
+  pinMode(MOD2, INPUT_PULLUP);
   
   pinMode(CLEFT, INPUT_PULLUP);
   pinMode(CRIGHT, INPUT_PULLUP);
   pinMode(CUP, INPUT_PULLUP);
   pinMode(CDOWN, INPUT_PULLUP);
-
-  pinMode(SWITCH, INPUT_PULLUP);
 
   //This is needed to run the code.
   GamecubeController1.read();
@@ -122,6 +106,10 @@ void loop()
 
   int pinxAxisC = 128;
   int pinyAxisC = 128;
+
+  int pinLState = 0;
+  int pinSState = 0;
+  int pinTaunt = 0;
   
   int pinxAxis = 128;
   int xmod = 0;
@@ -130,50 +118,70 @@ void loop()
   int rightOne = 0;
   int leftOne = 0;
   int downOne = 0;
-
-  int pinSWITCH = 0;
+  int upOne = 0;
+  int modA = 0;
+  int modB = 0;
+  int modC = 0;
 
   //This reads control stick as neutral when both left/right or up/down is pressed at the same time.  Also sets parameters for the diffrent analog tilt modifiers IE: X1+X2 = X3
   //UPDATE: NOW CORRESPONDS TO PROPER SMASHBOX ANGLES
-  if (digitalRead(LEFT) == HIGH && digitalRead(RIGHT) == LOW){
-    pinxAxis = 128+86;
-    if (digitalRead(X1) == LOW && digitalRead(X2) == HIGH)pinxAxis = X1v + 128;
-    if (digitalRead(X1) == HIGH && digitalRead(X2) == LOW)pinxAxis = X2v + 128;
-    if (digitalRead(X1) == LOW && digitalRead(X2) == LOW)pinxAxis = X3v + 128;
-    rightOne = 1;
-  }
-  if (digitalRead(LEFT) == LOW && digitalRead(RIGHT) == HIGH){
-    pinxAxis = 128-86;
-    if (digitalRead(X1) == LOW && digitalRead(X2) == HIGH)pinxAxis = 128 - X1v;
-    if (digitalRead(X1) == HIGH && digitalRead(X2) == LOW)pinxAxis = 128 - X2v;
-    if (digitalRead(X1) == LOW && digitalRead(X2) == LOW)pinxAxis = 128 - X3v;
-    leftOne = 1;
-  }
-    
-  if (digitalRead(DOWN) == HIGH && digitalRead(UP) == LOW){
-    pinyAxis = 128+86;
-    if (digitalRead(Y1) == LOW && digitalRead(Y2) == HIGH)pinyAxis = 128 + Y1v;
-    if (digitalRead(Y1) == HIGH && digitalRead(Y2) == LOW)pinyAxis = 128 + Y2v;
-    if (digitalRead(Y1) == LOW && digitalRead(Y2) == LOW)pinyAxis = 128 + Y3v;
-  }
-  if (digitalRead(DOWN) == LOW && digitalRead(UP) == HIGH){
-    pinyAxis = 128-86;
-    if (digitalRead(Y1) == LOW && digitalRead(Y2) == HIGH)pinyAxis = 128 - Y1v;
-    if (digitalRead(Y1) == HIGH && digitalRead(Y2) == LOW)pinyAxis = 128 - Y2v;
-    if (digitalRead(Y1) == LOW && digitalRead(Y2) == LOW)pinyAxis = 128 - Y3v;
-    downOne = 1;
-  }
+ 
+  if (digitalRead(LEFT) == LOW && digitalRead(RIGHT) == HIGH)leftOne = 1;
+  if (digitalRead(RIGHT) == LOW && digitalRead(LEFT) == HIGH)rightOne = 1;
+  if (digitalRead(UP) == LOW && digitalRead(DOWN) == HIGH)upOne = 1;
+  if (digitalRead(DOWN) == LOW && digitalRead(UP) == HIGH)downOne = 1;
 
-  //NEW: Axe Shield Drops
-  if (digitalRead(X1) == HIGH && digitalRead(X2) == HIGH && digitalRead(Y1) == HIGH && digitalRead(Y2) == HIGH && downOne == 1 && leftOne == 1){
-    pinxAxis = 128-80;
-    pinyAxis = 128-78;
-  }
+  if (digitalRead(DOWN) == LOW && digitalRead(DOWN) == HIGH)downOne = 1;
+  if (digitalRead(DOWN) == LOW && digitalRead(DOWN) == HIGH)downOne = 1;
 
-  if (digitalRead(X1) == HIGH && digitalRead(X2) == HIGH && digitalRead(Y1) == HIGH && digitalRead(Y2) == HIGH && downOne == 1 && rightOne == 1){
-    pinxAxis = 128+80;
-    pinyAxis = 128-78;
+  
+  if (digitalRead(MOD1) == LOW && digitalRead(MOD2) == HIGH)modA = 1;
+  if (digitalRead(MOD2) == LOW && digitalRead(MOD1) == HIGH)modB = 1;
+  if (digitalRead(MOD1) == LOW && digitalRead(MOD2) == LOW)modC = 1;
+
+  
+  //IF SHIELD DROP
+  if (downOne && (digitalRead(Z) == LOW || digitalRead(RLIGHT) == LOW || digitalRead(L) == LOW))
+  {
+    pinxAxis = 128;
+    pinyAxis = 73;
   }
+  //ELIF DIAG USE MODIFIER
+  else if ((upOne || downOne) && (leftOne || rightOne) && (modA || modB || modC))
+  {
+    if (modA){
+      pinxAxis = 128 + (rightOne - leftOne)*86;
+      pinyAxis = 128 + (upOne - downOne)*27;
+    }
+    if (modB){
+      pinxAxis = 128 + (rightOne - leftOne)*27;
+      pinyAxis = 128 + (upOne - downOne)*86;
+    }
+    if (modC){
+      pinxAxis = 128 + (rightOne - leftOne)*40;
+      pinyAxis = 128 + (upOne - downOne)*60;
+    }
+ }
+ //JUST CARDINAL, USES MODIFIERS DIFFERENTLY
+ else
+ {
+    if (modA){
+      pinxAxis = 128 + (rightOne - leftOne)*27;
+      pinyAxis = 128 + (upOne - downOne)*27;
+    }
+    else if (modB){
+      pinxAxis = 128 + (rightOne - leftOne)*55;
+      pinyAxis = 128 + (upOne - downOne)*55;
+    }
+    else if (modC){
+      pinxAxis = 128 + (rightOne - leftOne)*73;
+      pinyAxis = 128 + (upOne - downOne)*73;
+    }
+    else{
+      pinxAxis = 128 + (rightOne - leftOne)*87;
+      pinyAxis = 128 + (upOne - downOne)*87;
+    }
+ }
 
   //Reads CStick pins, same logic as controlstick values.
   if (digitalRead(CLEFT) == HIGH && digitalRead(CRIGHT) == LOW)pinxAxisC = 255;
@@ -187,29 +195,18 @@ void loop()
   if (digitalRead(Y) == LOW)pinY = 1;
   if (digitalRead(Z) == LOW)pinZ = 1;
   if (digitalRead(START) == LOW)pinSTART = 1;
+
+  if (digitalRead(LSTATE) == LOW && digitalRead(SSTATE) == LOW)pinTaunt = 1;
+  else if (digitalRead(LSTATE) == LOW)pinLState = 1;
+  else if (digitalRead(SSTATE) == LOW)pinSState = 1;
+
   //This is for analog shield
   if (digitalRead(RLIGHT) == LOW)pinRLIGHT = RLIGHTv;
   //This is for digital shield
   if (digitalRead(R) == LOW)pinR = 1;
   if (digitalRead(L) == LOW)pinL = 1;
 
-  if (digitalRead(SWITCH) == LOW)pinSWITCH = 1;
-
-  d.report.dup = 0;
-  d.report.dright = 0;
-  d.report.ddown = 0;
-  d.report.dleft = 0;
-    
-  //NEW WHEN SWITCH/BUTTON ON PIN 12 IS PRESSED/ACTIVATED SWAPS X1,X2,Y1,Y2 TO DPAD 
-  if (pinSWITCH == 1){
-    if(digitalRead(X1) == LOW)d.report.dleft = 1;
-    if(digitalRead(X2) == LOW)d.report.ddown = 1;
-    if(digitalRead(Y1) == LOW)d.report.dup = 1;
-    if(digitalRead(Y2) == LOW)d.report.dright = 1;
-  }
   
-
-
   //reports data
   d.report.a = pinA;
   d.report.b = pinB;
@@ -224,6 +221,11 @@ void loop()
   d.report.yAxis = pinyAxis;
   d.report.cxAxis = pinxAxisC;
   d.report.cyAxis = pinyAxisC;
+  d.report.dup = pinTaunt;
+  d.report.dright = pinLState;
+  d.report.ddown = 0;
+  d.report.dleft = pinSState;
+
   //sends the complied data to console when console polls for the input
   GamecubeConsole.write(d);
 
